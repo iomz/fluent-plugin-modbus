@@ -1,6 +1,6 @@
 # Fluent::Plugin::Modbus
 
-TODO: Write a gem description
+Fluent plugin to retrieve data from Modbus device 
 
 ## Installation
 
@@ -18,7 +18,24 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+    # modbus.conf
+    <source>
+      type modbus
+      tag modbus.server1
+      hostname 192.168.0.1
+      port 12345 
+      polling_time 0,10,20,30,40,50
+    </source>
+
+    <match modbus.b>
+      type file
+      path /var/log/modbus
+    </match>
+
+## TODO
+
+* Complete TestCase
+* Detailed Register address configuration
 
 ## Contributing
 
