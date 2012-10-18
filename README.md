@@ -34,6 +34,7 @@ Or install it yourself as:
 
 ## TODO
 
+* Develop unit system conversion for each devices
 * Complete TestCase
 * Detailed Register address configuration
 
