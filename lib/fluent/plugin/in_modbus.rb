@@ -89,11 +89,16 @@ module Fluent
 
     def modbus_aggregate_data(modbus_tcp_client, test = false)
       val = modbus_tcp_client.with_slave(1).read_input_registers(0, 8)
-      record = val[0]
+      record = to_signed(val[0], 16)
       time = Engine.now
       # p val
       Engine.emit(@tag, time, record)
       return {:time => time, :record => record} if test
+    end
+
+    def to_signed(value, bits)
+      mask = (1 << (bits - 1))
+      return (value & ~mask) - (value & mask)
     end
 
   end
