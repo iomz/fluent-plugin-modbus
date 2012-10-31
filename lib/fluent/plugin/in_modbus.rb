@@ -48,7 +48,7 @@ module Fluent
 
     def run
       watcher do
-        modbus_aggregate_data(@modbus_tcp_client)
+        modbus_aggregate_data(@modbus_tcp_client, @register_addr, @register_num)
       end
     rescue => exc
       p exc
@@ -89,9 +89,9 @@ module Fluent
         break if @end_flag
       end
     end
-
-    def modbus_aggregate_data(modbus_tcp_client, test = false)
-      reg = modbus_tcp_client.with_slave(1).read_input_registers(@register_addr, @register_num)
+    
+    def modbus_aggregate_data(modbus_tcp_client, addr, nregs, test = false)
+      reg = modbus_tcp_client.with_slave(1).read_input_registers(addr, nregs) # Get an array of values
       time = Engine.now
       # p val
       record = {'value' => val, 'unit' => @unit}

@@ -4,7 +4,7 @@ lib = File.expand_path('../lib', __FILE__)
 Gem::Specification.new do |gem|
   gem.name          = "fluent-plugin-modbus"
   gem.version       = "0.0.1"
-  gem.authors       = [" MIZUTANI Iori"]
+  gem.authors       = ["iomz"]
   gem.email         = ["iomz@sfc.wide.ad.jp"]
   gem.description   = %q{Input plugin for modbus}
   gem.summary       = %q{Input plugin for modbus}

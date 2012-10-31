@@ -4,8 +4,8 @@ module Fluent
   class ModbusCHFInput < ModbusInput
     Plugin.register_input('modbus_CHF-LP02-4', self)
 
-    def modbus_aggregate_data(modbus_tcp_client, test = false)
-      reg = modbus_tcp_client.with_slave(1).read_input_registers(@register_addr, @register_num)
+    def modbus_aggregate_data(modbus_tcp_client, addr, nregs, test = false)
+      reg = modbus_tcp_client.with_slave(1).read_input_registers(addr, nregs)
       val = to_signed(reg[0], 16) # Convert 16bit unsigned integer to signed
       val = convert_unit(val, 10000, 2000) # Convert value of 0-10k to 0-2kW 
       record = {:value => val, :unit => @unit}
