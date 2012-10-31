@@ -10,6 +10,8 @@ module Fluent
     config_param :hostname, :string
     config_param :port, :integer
     config_param :polling_time, :string, :default => nil # Seconds separated by ',' 
+    config_param :register_addr, :integer, :default => nil # Address first registers
+    config_param :register_num, :integer, :default => nil # Number registers
     config_param :unit, :string, :defalut => nil
 
     def initialize
@@ -89,10 +91,11 @@ module Fluent
     end
 
     def modbus_aggregate_data(modbus_tcp_client, test = false)
-      val = modbus_tcp_client.with_slave(1).read_input_registers(0, 8)
+      val = modbus_tcp_client.with_slave(1).read_input_registers(@register_addr, @register_num)
       time = Engine.now
       # p val
-      Engine.emit(@tag, time, record, unit)
+      record = {'value' => val, 'unit' => @unit}
+      Engine.emit(@tag, time, record)
       return {:time => time, :record => record} if test
     end
 
