@@ -38,10 +38,8 @@ Or install it yourself as:
 * Complete TestCase
 * Detailed Register address configuration
 
-## Contributing
+## Copyright
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+Copyright (c) 2012- Kenichi Yasukata, Iori MIZUTANI
+
+Apache License, Version 2.0
