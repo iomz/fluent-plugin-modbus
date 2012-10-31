@@ -91,7 +91,7 @@ module Fluent
     end
 
     def modbus_aggregate_data(modbus_tcp_client, test = false)
-      val = modbus_tcp_client.with_slave(1).read_input_registers(@register_addr, @register_num)
+      reg = modbus_tcp_client.with_slave(1).read_input_registers(@register_addr, @register_num)
       time = Engine.now
       # p val
       record = {'value' => val, 'unit' => @unit}
