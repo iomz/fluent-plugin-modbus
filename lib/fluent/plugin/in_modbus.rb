@@ -97,8 +97,8 @@ module Fluent
     def translate_reg(reg)
       if @nregs==1 && @reg_size==16         # 16bit integer
         return reg.pack("S").unpack("s")[0]
-      elsif @nregs==2 && @reg_size==16    # 32bit float
-        return reg.pack("D").unpack("D")[0]
+      elsif @nregs==2 && @reg_size==16      # 32bit float, big-endian
+        return reg.pack("nn").unpack("g")[0]
       else 
         return reg[0]
       end
