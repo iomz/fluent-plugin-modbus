@@ -10,9 +10,13 @@ module Fluent
     config_param :hostname, :string
     config_param :port, :integer
     config_param :polling_time, :string, :default => nil # Seconds separated by ',' 
-    config_param :register_addr, :integer, :default => nil # Address first registers
-    config_param :register_num, :integer, :default => nil # Number registers
-    config_param :unit, :string, :defalut => nil
+    config_param :reg_size, :integer, :default => 16 # Bit size of one register
+    config_param :reg_addr, :integer, :default => 0 # Address of the first registers
+    config_param :nregs, :integer, :default => 1 # Number of registers
+    config_param :max_input, :float, :default => nil # Max value of input
+    config_param :max_device_output, :float, :defaut => nil # Max value of device output
+    config_param :unit, :string, :defalut => nil # Unit for device output
+    config_param :data_format, :string, :default =>"%d %s" # String format for data
 
     def initialize
       super
@@ -48,7 +52,7 @@ module Fluent
 
     def run
       watcher do
-        modbus_aggregate_data(@modbus_tcp_client, @register_addr, @register_num)
+        modbus_aggregate_data(@modbus_tcp_client)
       end
     rescue => exc
       p exc
@@ -90,11 +94,29 @@ module Fluent
       end
     end
     
-    def modbus_aggregate_data(modbus_tcp_client, addr, nregs, test = false)
-      reg = modbus_tcp_client.with_slave(1).read_input_registers(addr, nregs) # Get an array of values
+    def translate_reg(reg)
+      if @nregs==1 && @reg_size==16         # 16bit integer
+        return reg.pack("S").unpack("s")[0]
+      elsif @nregs==2 && @reg_size==16    # 32bit float
+        return reg.pack("D").unpack("D")[0]
+      else 
+        return reg[0]
+      end
+    end
+
+    def modbus_aggregate_data(modbus_tcp_client, test = false)
+      # Get an array of register
+      reg = modbus_tcp_client.with_slave(1).read_input_registers(@reg_addr, @nregs)
+      
+      # Translate the register array to the value
+      val = translate_reg(reg)
+      
+      # Convert the value in the device's unit
+      val = (@max_device_output / @max_input) * val
+
+      record = @data_format%[val,@unit]
+
       time = Engine.now
-      # p val
-      record = {'value' => val, 'unit' => @unit}
       Engine.emit(@tag, time, record)
       return {:time => time, :record => record} if test
     end
