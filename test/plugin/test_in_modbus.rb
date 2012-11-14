@@ -1,20 +1,28 @@
-#require 'test/unit'
-#require 'fluent/test'
-#require 'lib/fluent/plugin/in_modbus'
-#require 'time'
-require 'helper'
+require '../helper'
+require 'in_modbus'
+require 'time'
 
 class ModbusInputTest < Test::Unit::TestCase
+
   def setup
     Fluent::Test.setup
     @obj = Fluent::ModbusInput.new
   end
 
   CONFIG = %[
-    tag monbus.server1
-    polling_time 0,10,20,30,40,50
+    tag modbus.test1
     hostname 192.168.0.37 
     port 502
+    polling_time 0,30
+    modbus_retry 1
+    reg_size 16
+    reg_addr 0
+    nregs 1
+    max_input 10000
+    max_device_output 2000
+    unit W/m^2
+    data_format %.2f %%, %.1f %s
+    format_type 3
   ]
   
   def create_driver(conf=CONFIG)
@@ -24,47 +32,51 @@ class ModbusInputTest < Test::Unit::TestCase
   def test_configure
     d = create_driver
 
-    # Fluent Params
-    assert_equal 'modbus.server1', d.instance.tag
-    assert_equal [0,10,20,30,40,50], d.instance.pollint_time
-
-    # Modbus Params
-    assert_equal "localhost", d.instance.hostname
+    # Params
+    assert_equal 'modbus.test1', d.instance.tag
+    assert_equal '192.168.0.37', d.instance.hostname
     assert_equal 502, d.instance.port
+    assert_equal [0,30], d.instance.polling_time
+    assert_equal 1, d.instance.modbus_retry
+    assert_equal 16, d.instance.reg_size
+    assert_equal 0, d.instance.reg_addr
+    assert_equal 1, d.instance.nregs
+    assert_equal 10000.0, d.instance.max_input
+    assert_equal 2000.0, d.instance.max_device_output
+    assert_equal 'W/m^2', d.instance.unit
+    assert_equal '%.2f %%, %.1f %s', d.instance.data_format
+    assert_equal 3, d.instance.format_type
   end
 
-  def test_sleep_interval
-    Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:59")
-    assert_equal 1, @obj.__send__(:sleep_interval,60)
-
-    Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:50")
-    assert_equal false, @obj.__send__(:sleep_interval,10)
-
-    Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:59")
-    assert_equal 1, @obj.__send__(:sleep_interval,0,false)
-
-    Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:50")
-    assert_equal false, @obj.__send__(:sleep_interval,50,false)
-
-    # Test OK
-    #Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:50")
-    #assert_equal 70, @obj.__send__(:sleep_interval,120,0)
-  end
-
-  def test_modbus_aggregate_data
+  def test_modbus_tcp_client
     d = create_driver
     hostname = d.instance.hostname
     port = d.instance.port
     tag = d.instance.tag
+    reg_addr = d.instance.reg_addr
+    nregs = d.instance.nregs
+    modbus_retry = d.instance.modbus_retry
     
-    # unixtime 1356965990
-    Time.stubs(:now).returns(Time.parse "2012/12/31 23:59:50")
-    modbus_tcp_client = ModBus::TCPClient.new(@hostname, @port)
-    
-    data = @obj.__send__(:modbus_aggregate_data, modbus_tcp_client, true)
+    modbus_tcp_client = ModBus::TCPClient.new(hostname, port)
+    data = @obj.__send__(:modbus_fetch_data, modbus_tcp_client, test=True)
+   
+    assert_equal Array, data[:reg]
+    assert_equal String, data[:record]
+  end
 
-    assert_equal 1356965990, data[:time]
-    assert_equal Integer, data[:record]
+  def test_translate_reg
+    d = create_driver
+    reg_size = d.instance.reg_size
+
+    nregs = 2 
+    reg = [0b1011111110000000, 0b0000000000000000] # 2 16 bit registers, float -1.0 in binay
+    raw = @obj.__send__(:translate_reg, reg, nregs, reg_size)
+    assert_equal -1.0, raw
+
+    nregs = 1
+    reg = [0b1111111111111111]
+    raw = @obj.__send__(:translate_reg, reg, nregs, reg_size)
+    assert_equal -1, raw
   end
 
 end

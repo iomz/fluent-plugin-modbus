@@ -5,18 +5,20 @@ module Fluent
     Plugin.register_input('modbus', self)
 
     # Fluent Params
-    # require param: tag, mib
+    # require param: tag, hostname, port
     config_param :tag, :string
     config_param :hostname, :string
     config_param :port, :integer
-    config_param :polling_time, :string, :default => nil # Seconds separated by ',' 
+    config_param :polling_time, :string, :default => nil # Seconds separated by ','
+    config_param :modbus_retry, :integer, :default => 1 # Retry count for connecting to modbus device 
     config_param :reg_size, :integer, :default => 16 # Bit size of one register
-    config_param :reg_addr, :integer, :default => 0 # Address of the first registers
-    config_param :nregs, :integer, :default => 1 # Number of registers
-    config_param :max_input, :float, :default => nil # Max value of input
-    config_param :max_device_output, :float, :defaut => nil # Max value of device output
-    config_param :unit, :string, :defalut => nil # Unit for device output
-    config_param :data_format, :string, :default =>"%d %s" # String format for data
+    config_param :reg_addr, :integer, :default => 0  # Address of the first registers
+    config_param :nregs, :integer, :default => 1     # Number of registers
+    config_param :max_input, :float                  # Max value of input
+    config_param :max_device_output, :float          # Max value of device output
+    config_param :unit, :string, :defalut => nil     # Unit for device output
+    config_param :data_format, :string, :default =>"%d" # String format for data
+    config_param :format_type, :integer, :default => 0  # Specify the elements to intepret by data_format 
 
     def initialize
       super
@@ -52,7 +54,7 @@ module Fluent
 
     def run
       watcher do
-        modbus_aggregate_data(@modbus_tcp_client)
+        modbus_fetch_data(@modbus_tcp_client)
       end
     rescue => exc
       p exc
@@ -94,31 +96,46 @@ module Fluent
       end
     end
     
-    def translate_reg(reg)
-      if @nregs==1 && @reg_size==16         # 16bit integer
+    def translate_reg(reg, nregs, reg_size)
+      if nregs==1 && reg_size==16         # 16bit integer
         return reg.pack("S").unpack("s")[0]
-      elsif @nregs==2 && @reg_size==16      # 32bit float, big-endian
+      elsif nregs==2 && reg_size==16      # 32bit float, big-endian
         return reg.pack("nn").unpack("g")[0]
       else 
         return reg[0]
       end
     end
 
-    def modbus_aggregate_data(modbus_tcp_client, test = false)
-      # Get an array of register
-      reg = modbus_tcp_client.with_slave(1).read_input_registers(@reg_addr, @nregs)
+    def modbus_fetch_data(mtc, test = false)
       
+      # Get an array of registers
+      mtc do |cl|
+        cl.with_slave(@modbus_retry) do |sl|
+          reg = sl.read_input_registers(@reg_addr, @nregs)
+        end
+      end
+
       # Translate the register array to the value
-      val = translate_reg(reg)
+      raw = translate_reg(reg, @nregs, @reg_size)
       
       # Convert the value in the device's unit
-      val = (@max_device_output / @max_input) * val
+      val = (@max_device_output / @max_input) * raw 
+      percentile = val/@max_device_output*100.0
 
-      record = @data_format%[val,@unit]
+      case @format_type  # [raw, percentile, val] express which to display as 3 bits
+      when 1 
+          record = @data_format % [val,@unit]
+      when 2
+          record = @data_format % [percentile]
+      when 3
+          record = @data_format % [percentile, val, @unit]
+      else
+          record = @data_format % [raw]
+      end
 
       time = Engine.now
       Engine.emit(@tag, time, record)
-      return {:time => time, :record => record} if test
+      return {:reg => reg, :record => record} if test
     end
 
   end
