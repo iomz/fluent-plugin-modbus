@@ -62,11 +62,8 @@ class ModbusInputTest < Test::Unit::TestCase
         @reg = sl.read_input_registers(reg_addr, nregs)
       end
     end
-    
-    data = @obj.__send__(:modbus_fetch_data, @reg, true)
-   
-    assert_equal Array, data[:reg]
-    assert_equal String, data[:record]
+
+    assert_equal Array, @reg
   end
 
   def test_translate_reg
@@ -83,5 +80,33 @@ class ModbusInputTest < Test::Unit::TestCase
     raw = @obj.__send__(:translate_reg, reg, nregs, reg_size)
     assert_equal -1, raw
   end
+
+  def test_data_emission
+    d = create_driver
+    nregs = d.instance.nregs
+    reg_size = d.instance.reg_size
+    max_device_output = d.instance.max_device_output
+    max_input = d.instance.max_input
+    format_type = d.instance.format_type
+    data_format = d.instance.data_format
+    unit = d.instance.unit
+    tag = d.instance.tag
+    
+    nregs = 2
+    reg = [0b1011111110000000, 0b0000000000000000] # 2 16 bit registers, float -1.0 in binay
+    data = @obj.__send__(:modbus_fetch_data, reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, true)
+
+    assert_equal Float, data[:raw]
+    assert_equal String, data[:record]
+
+    nregs = 1
+    reg = [0b1111111111111111]
+    data = @obj.__send__(:modbus_fetch_data, reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, true)
+
+    assert_equal Integer, data[:raw]
+    assert_equal String, data[:record]
+
+  end
+      
 
 end

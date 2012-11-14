@@ -61,7 +61,7 @@ module Fluent
             @reg = sl.read_input_registers(@reg_addr, @nregs)
           end
         end
-        modbus_fetch_data(@reg)
+        modbus_fetch_data(@reg, @nregs, @reg_size, @max_device_output, @max_input, @format_type, @data_format, @unit, @tag)
       end
     rescue => exc
       p exc
@@ -114,29 +114,29 @@ module Fluent
       end
     end
 
-    def modbus_fetch_data(reg, test = false)
       
+    def modbus_fetch_data(reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, test = false)
       # Translate the register array to the value
-      raw = translate_reg(reg, @nregs, @reg_size)
+      raw = translate_reg(reg, nregs, reg_size)
       
       # Convert the value in the device's unit
-      val = (@max_device_output / @max_input) * raw 
-      percentile = val/@max_device_output*100.0
+      val = (max_device_output / max_input) * raw 
+      percentile = val/max_device_output*100.0
 
-      case @format_type  # [raw, percentile, val] express which to display as 3 bits
+      case format_type  # [raw, percentile, val] express which to display as 3 bits
       when 1 
-          record = @data_format % [val,@unit]
+          record = data_format % [val, unit]
       when 2
-          record = @data_format % [percentile]
+          record = data_format % [percentile]
       when 3
-          record = @data_format % [percentile, val, @unit]
+          record = data_format % [percentile, val, unit]
       else
-          record = @data_format % [raw]
+          record = data_format % [raw]
       end
 
       time = Engine.now
-      Engine.emit(@tag, time, record)
-      return {:reg => reg, :record => record} if test
+      Engine.emit(tag, time, record)
+      return {:raw => raw, :record => record} if test
     end
 
   end
