@@ -42,11 +42,12 @@ module Fluent
     def start
       starter do
         begin
-            @modbus_tcp_client = ModBus::TCPClient.new(@hostname, @port)
+            mtc = ModBus::TCPClient.new(@hostname, @port)
         rescue => exc
             p exc
             shutdown
         end
+        mtc.close unless mtc.closed?
         @thread = Thread.new(&method(:run))
         @end_flag = false
       end
@@ -55,7 +56,7 @@ module Fluent
     def run
       watcher do
         # Get an array of registers
-        mtc do |cl|
+        ModBus::TCPClient.connect(@hostname, @port) do |cl|
           cl.with_slave(@modbus_retry) do |sl|
             reg = sl.read_input_registers(@reg_addr, @nregs)
           end
