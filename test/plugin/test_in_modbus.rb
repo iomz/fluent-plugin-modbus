@@ -107,6 +107,5 @@ class ModbusInputTest < Test::Unit::TestCase
     assert_equal String, data[:record]
 
   end
-      
 
 end

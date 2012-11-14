@@ -5,10 +5,10 @@ module Fluent
     Plugin.register_input('modbus', self)
 
     # Fluent Params
-    # require param: tag, hostname, port
+    # require param: tag, hostname
     config_param :tag, :string
     config_param :hostname, :string
-    config_param :port, :integer
+    config_param :port, :integer, :default => 502
     config_param :polling_time, :string, :default => nil # Seconds separated by ','
     config_param :modbus_retry, :integer, :default => 1 # Retry count for connecting to modbus device 
     config_param :reg_size, :integer, :default => 16 # Bit size of one register
@@ -17,8 +17,8 @@ module Fluent
     config_param :max_input, :float                  # Max value of input
     config_param :max_device_output, :float          # Max value of device output
     config_param :unit, :string, :defalut => nil     # Unit for device output
-    config_param :data_format, :string, :default =>"%d" # String format for data
     config_param :format_type, :integer, :default => 0  # Specify the elements to intepret by data_format 
+    config_param :data_format, :string, :default =>"%d" # String format for data
 
     def initialize
       super
