@@ -58,10 +58,10 @@ module Fluent
         # Get an array of registers
         ModBus::TCPClient.connect(@hostname, @port) do |cl|
           cl.with_slave(@modbus_retry) do |sl|
-            reg = sl.read_input_registers(@reg_addr, @nregs)
+            @reg = sl.read_input_registers(@reg_addr, @nregs)
           end
         end
-        modbus_fetch_data(reg)
+        modbus_fetch_data(@reg)
       end
     rescue => exc
       p exc

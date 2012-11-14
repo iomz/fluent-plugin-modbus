@@ -59,11 +59,11 @@ class ModbusInputTest < Test::Unit::TestCase
     
     ModBus::TCPClient.new(hostname, port) do |cl|
       cl.with_slave(modbus_retry) do |sl|
-        reg = sl.read_input_registers(reg_addr, nregs)
+        @reg = sl.read_input_registers(reg_addr, nregs)
       end
     end
     
-    data = @obj.__send__(:modbus_fetch_data, reg, true)
+    data = @obj.__send__(:modbus_fetch_data, @reg, true)
    
     assert_equal Array, data[:reg]
     assert_equal String, data[:record]
