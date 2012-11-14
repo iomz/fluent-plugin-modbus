@@ -57,8 +57,13 @@ class ModbusInputTest < Test::Unit::TestCase
     nregs = d.instance.nregs
     modbus_retry = d.instance.modbus_retry
     
-    modbus_tcp_client = ModBus::TCPClient.new(hostname, port)
-    data = @obj.__send__(:modbus_fetch_data, modbus_tcp_client, test=True)
+    ModBus::TCPClient.new(hostname, port) do |cl|
+      cl.with_slave(modbus_retry) do |sl|
+        reg = sl.read_input_registers(reg_addr, nregs)
+      end
+    end
+    
+    data = @obj.__send__(:modbus_fetch_data, reg, true)
    
     assert_equal Array, data[:reg]
     assert_equal String, data[:record]

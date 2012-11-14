@@ -54,7 +54,13 @@ module Fluent
 
     def run
       watcher do
-        modbus_fetch_data(@modbus_tcp_client)
+        # Get an array of registers
+        mtc do |cl|
+          cl.with_slave(@modbus_retry) do |sl|
+            reg = sl.read_input_registers(@reg_addr, @nregs)
+          end
+        end
+        modbus_fetch_data(reg)
       end
     rescue => exc
       p exc
@@ -65,6 +71,7 @@ module Fluent
 
     # Called on Ctrl-c
     def shutdown
+      @modbus_tcp_client.close
       @end_flag = true
       @thread.run
       @thread.join
@@ -106,15 +113,8 @@ module Fluent
       end
     end
 
-    def modbus_fetch_data(mtc, test = false)
+    def modbus_fetch_data(reg, test = false)
       
-      # Get an array of registers
-      mtc do |cl|
-        cl.with_slave(@modbus_retry) do |sl|
-          reg = sl.read_input_registers(@reg_addr, @nregs)
-        end
-      end
-
       # Translate the register array to the value
       raw = translate_reg(reg, @nregs, @reg_size)
       
