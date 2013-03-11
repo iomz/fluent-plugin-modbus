@@ -1,41 +1,47 @@
-require 'rmodbus'
-
 module Fluent
-  class ModbusInput < Input
+
+    
+class ModbusInput < Input
     Plugin.register_input('modbus', self)
 
     # Fluent Params
     # require param: tag, hostname
     config_param :tag, :string
     config_param :hostname, :string
-    config_param :port, :integer, :default => 502
-    config_param :polling_time, :string, :default => nil # Seconds separated by ','
+    config_param :port, :integer, :default => 502       # Port used by modbus
+    config_param :polling_time, :string, :default => "0,30" # Seconds separated by ','
+
     config_param :modbus_retry, :integer, :default => 1 # Retry count for connecting to modbus device 
-    config_param :reg_size, :integer, :default => 16 # Bit size of one register
-    config_param :reg_addr, :integer, :default => 0  # Address of the first registers
-    config_param :nregs, :integer, :default => 1     # Number of registers
-    config_param :max_input, :float                  # Max value of input
-    config_param :max_device_output, :float          # Max value of device output
-    config_param :unit, :string, :defalut => nil     # Unit for device output
+    config_param :reg_size, :integer, :default => 16    # Bit size of one register
+    config_param :reg_addr, :integer, :default => 0     # Address of the first registers
+    config_param :nregs, :integer, :default => 1        # Number of registers
+    config_param :max_input, :float                     # Max value of input
+    config_param :max_device_output, :float             # Max value of device output
+    config_param :unit, :string, :defalut => nil        # Unit for device output
     config_param :format_type, :integer, :default => 0  # Specify the elements to intepret by data_format 
     config_param :data_format, :string, :default =>"%d" # String format for data
 
     def initialize
       super
+      require 'rmodbus'
     end  
 
     def configure(conf)                                                         
       super
 
+      raise ConfigError, "tag is required param" if @tag.empty?
+      raise ConfigError, "hostname is required param" if @hostname.empty?
+
       # Parse polling_time to list
       @polling_time = @polling_time.split(',').map{|str| str.strip.to_i} unless @polling_time.nil?
-      raise ConfigError, "modbus: 'polling_time' parameter is required on modbus input" if !@polling_time.nil? && @polling_time.empty?
+      raise ConfigError, "modbus: 'polling_time' parameter is required on modbus input" if @polling_time.empty?
     end
 
+    # Wait until the next zero second
     def starter
       @starter = Thread.new do
         sleep_interval(60)
-        yield
+        yield   # starter proc in :start 
       end
     end
 
@@ -43,9 +49,9 @@ module Fluent
       starter do
         begin
             mtc = ModBus::TCPClient.new(@hostname, @port)
-        rescue => exc
-            p exc
-            shutdown
+        rescue => ex
+            p ex
+            shutdown # If connection failed, shutdown
         end
         mtc.close unless mtc.closed?
         @thread = Thread.new(&method(:run))
@@ -56,27 +62,41 @@ module Fluent
     def run
       watcher do
         # Get an array of registers
-        ModBus::TCPClient.connect(@hostname, @port) do |cl|
-          cl.with_slave(@modbus_retry) do |sl|
+        ModBus::TCPClient.new(@hostname, @port) do |cl|
+          cl.with_slave(@modbus_retry) do |sl| 
             @reg = sl.read_input_registers(@reg_addr, @nregs)
           end
         end
-        modbus_fetch_data(@reg, @nregs, @reg_size, @max_device_output, @max_input, @format_type, @data_format, @unit, @tag)
+        modbus_fetch_data
       end
-    rescue => exc
-      p exc
+    rescue => ex
+      p ex
       $log.error "run failed", :error=>ex.message
       sleep(10)
       retry
     end
 
-    # Called on Ctrl-c
+    # Call sleep_interval according to the polling time
+    def watcher
+      zero_start = true
+      loop do
+        @polling_time.each do |time|
+          break if @end_flag
+          sleep_interval(time, zero_start)
+          zero_start = false
+          yield
+        end
+        break if @end_flag
+      end
+    end
+    
+     # Called on Ctrl-c
     def shutdown
-      @modbus_tcp_client.close
       @end_flag = true
       @thread.run
       @thread.join
       @starter.join
+      @modbus_tcp_client.close
     end
 
     private
@@ -90,20 +110,7 @@ module Fluent
       secs > 0 ? (sleep secs) : false
     end
 
-    def watcher
-      zero_start = true
-      loop do
-        # [0,30].each do |time|
-        @polling_time.each do |time|
-          break if @end_flag
-          sleep_interval(time, zero_start)
-          zero_start = false
-          yield
-        end
-        break if @end_flag
-      end
-    end
-    
+    # Translation and check data type from the register
     def translate_reg(reg, nregs, reg_size)
       if nregs==1 && reg_size==16         # 16bit integer
         return reg.pack("S").unpack("s")[0]
@@ -112,30 +119,32 @@ module Fluent
       else 
         return reg[0]
       end
+    rescue => ex
+        $log.error "modbus failed to check_type", :error =>ex.message
+        $log.warn_backtrace ex.backtrace
     end
-
       
-    def modbus_fetch_data(reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, test = false)
+    def modbus_fetch_data(test = false)
       # Translate the register array to the value
-      raw = translate_reg(reg, nregs, reg_size)
+      raw = translate_reg(@reg, @nregs, @reg_size)
       
       # Convert the value in the device's unit
-      val = (max_device_output / max_input) * raw 
-      percentile = val/max_device_output*100.0
+      val = (@max_device_output / @max_input) * raw 
+      percentile = val/@max_device_output*100.0
 
-      case format_type  # [raw, percentile, val] express which to display as 3 bits
+      case @format_type  # [raw, percentile, val] express which to display as 3 bits
       when 1 
-          record = data_format % [val, unit]
+          record = @data_format % [val, unit]
       when 2
-          record = data_format % [percentile]
+          record = @data_format % [percentile]
       when 3
-          record = data_format % [percentile, val, unit]
+          record = @data_format % [percentile, val, @unit]
       else
-          record = data_format % [raw]
+          record = @data_format % [raw]
       end
 
       time = Engine.now
-      Engine.emit(tag, time, record)
+      Engine.emit(@tag, time, record)
       return {:raw => raw, :record => record} if test
     end
 
