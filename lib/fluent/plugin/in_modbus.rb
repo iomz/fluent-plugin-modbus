@@ -63,15 +63,14 @@ class ModbusInput < Input
       watcher do
         # Get an array of registers
         ModBus::TCPClient.new(@hostname, @port) do |cl|
-          cl.with_slave(@modbus_retry) do |sl| 
+          cl.with_slave(@modbus_retry) do |sl|
             @reg = sl.read_input_registers(@reg_addr, @nregs)
           end
         end
         modbus_fetch_data
       end
     rescue => ex
-      p ex
-      $log.error "run failed", :error=>ex.message
+      $log.error "modbus failed to fetch data ", :error=>ex.message
       sleep(10)
       retry
     end

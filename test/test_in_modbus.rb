@@ -1,4 +1,4 @@
-require '../helper'
+require './helper'
 require 'in_modbus'
 require 'time'
 
@@ -44,8 +44,8 @@ class ModbusInputTest < Test::Unit::TestCase
     assert_equal 10000.0, d.instance.max_input
     assert_equal 2000.0, d.instance.max_device_output
     assert_equal 'W/m^2', d.instance.unit
-    assert_equal '%.2f %%, %.1f %s', d.instance.data_format
     assert_equal 3, d.instance.format_type
+    assert_equal '%.2f %%, %.1f %s', d.instance.data_format
   end
 
   def test_modbus_tcp_client
@@ -83,25 +83,25 @@ class ModbusInputTest < Test::Unit::TestCase
 
   def test_data_emission
     d = create_driver
-    nregs = d.instance.nregs
-    reg_size = d.instance.reg_size
-    max_device_output = d.instance.max_device_output
-    max_input = d.instance.max_input
-    format_type = d.instance.format_type
-    data_format = d.instance.data_format
-    unit = d.instance.unit
-    tag = d.instance.tag
+    @nregs = d.instance.nregs
+    @reg_size = d.instance.reg_size
+    @max_device_output = d.instance.max_device_output
+    @max_input = d.instance.max_input
+    @format_type = d.instance.format_type
+    @data_format = d.instance.data_format
+    @unit = d.instance.unit
+    @tag = d.instance.tag
     
-    nregs = 2
-    reg = [0b1011111110000000, 0b0000000000000000] # 2 16 bit registers, float -1.0 in binay
-    data = @obj.__send__(:modbus_fetch_data, reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, true)
+    @nregs = 2
+    @reg = [0b1011111110000000, 0b0000000000000000] # 2 16 bit registers, float -1.0 in binay
+    data = @obj.__send__(:modbus_fetch_data, true)
 
     assert_equal Float, data[:raw]
     assert_equal String, data[:record]
 
-    nregs = 1
-    reg = [0b1111111111111111]
-    data = @obj.__send__(:modbus_fetch_data, reg, nregs, reg_size, max_device_output, max_input, format_type, data_format, unit, tag, true)
+    @nregs = 1
+    @reg = [0b1111111111111111]
+    data = @obj.__send__(:modbus_fetch_data, true)
 
     assert_equal Integer, data[:raw]
     assert_equal String, data[:record]
