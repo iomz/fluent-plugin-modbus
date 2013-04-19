@@ -1,6 +1,6 @@
 # Fluent::Plugin::Modbus
 
-Fluent plugin to retrieve data from Modbus device 
+Fluent plugin to retrieve data from Modbus device and store the values into mysql
 
 ## Installation
 
@@ -20,26 +20,32 @@ Or install it yourself as:
 
     # modbus.conf
     <source>
-      type modbus
-      tag modbus.server1
-      hostname 192.168.0.1
-      port 12345 
-      polling_time 0,10,20,30,40,50
+        type modbus
+        tag modbus.sensor1     # Tag for the data
+        hostname 192.168.0.200 # ModBus host
+        port 502               # ModBus port
+        polling_time 0,30      # Poll data at seconds separated by colons
+        modbus_retry 1         # Retry counts for TCP connection to ModBus host
+        reg_size 16            # Register size of ModBus I/O device in bit
+        reg_addr 0             # Address of the register to read
+        nregs 1                # Number of sequential registers to read [1-2]
+        max_input 10000        # Maximum value FROM ModBus I/O
+        max_device_output 2000 # Maximum value TO ModBus I/O FROM sensor devices
+        unit W/m^2             # Unit for the sensor device
+        format_type 3          # Output data format type [0-3] 0: [raw], 1: [val, unit], 2: [percentile], 3: [percentile, val, unit]       
+        data_format %.2f %%, %.1f %s # String format to output (depending on the format type)
     </source>
 
-    <match modbus.b>
+    <match modbus.sensor1>
       type file
       path /var/log/modbus
     </match>
 
 ## TODO
 
-* Develop unit system conversion for each devices
-* Complete TestCase
-* Detailed Register address configuration
 
 ## Copyright
 
-Copyright (c) 2012- Kenichi Yasukata, Iori MIZUTANI
+Copyright (c) 2012- Kenichi YASUKATA, Iori MIZUTANI
 
 Apache License, Version 2.0

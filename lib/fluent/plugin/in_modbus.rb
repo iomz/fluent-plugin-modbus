@@ -1,5 +1,4 @@
 module Fluent
-
     
 class ModbusInput < Input
     Plugin.register_input('modbus', self)
@@ -10,16 +9,10 @@ class ModbusInput < Input
     config_param :hostname, :string
     config_param :port, :integer, :default => 502       # Port used by modbus
     config_param :polling_time, :string, :default => "0,30" # Seconds separated by ','
-
     config_param :modbus_retry, :integer, :default => 1 # Retry count for connecting to modbus device 
     config_param :reg_size, :integer, :default => 16    # Bit size of one register
     config_param :reg_addr, :integer, :default => 0     # Address of the first registers
     config_param :nregs, :integer, :default => 1        # Number of registers
-    config_param :max_input, :float                     # Max value of input
-    config_param :max_device_output, :float             # Max value of device output
-    config_param :unit, :string, :defalut => nil        # Unit for device output
-    config_param :format_type, :integer, :default => 0  # Specify the elements to intepret by data_format 
-    config_param :data_format, :string, :default =>"%d" # String format for data
 
     def initialize
       super
@@ -126,21 +119,14 @@ class ModbusInput < Input
     def modbus_fetch_data(test = false)
       # Translate the register array to the value
       raw = translate_reg(@reg, @nregs, @reg_size)
-      
+
+=begin
       # Convert the value in the device's unit
       val = (@max_device_output / @max_input) * raw 
       percentile = val/@max_device_output*100.0
+=end
 
-      case @format_type  # [raw, percentile, val] express which to display as 3 bits
-      when 1 
-          record = @data_format % [val, unit]
-      when 2
-          record = @data_format % [percentile]
-      when 3
-          record = @data_format % [percentile, val, @unit]
-      else
-          record = @data_format % [raw]
-      end
+      record = "#{raw}"
 
       time = Engine.now
       Engine.emit(@tag, time, record)
