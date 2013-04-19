@@ -31,9 +31,8 @@ Or install it yourself as:
         nregs 1                # Number of sequential registers to read [1-2]
         max_input 10000        # Maximum value FROM ModBus I/O
         max_device_output 2000 # Maximum value TO ModBus I/O FROM sensor devices
+        data_format %.2f       # String format to output (depending on the format type)
         unit W/m^2             # Unit for the sensor device
-        format_type 3          # Output data format type [0-3] 0: [raw], 1: [val, unit], 2: [percentile], 3: [percentile, val, unit]       
-        data_format %.2f %%, %.1f %s # String format to output (depending on the format type)
     </source>
 
     <match modbus.sensor1>
