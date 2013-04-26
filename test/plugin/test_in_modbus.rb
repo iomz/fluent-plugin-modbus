@@ -1,4 +1,4 @@
-require '../helper'
+require "#{File.expand_path("..",File.dirname(__FILE__))}/helper"
 require 'in_modbus'
 require 'time'
 
@@ -11,8 +11,8 @@ class ModbusInputTest < Test::Unit::TestCase
 
   CONFIG = %[
     tag modbus.test1
-    hostname 192.168.0.200
-    port 502
+    hostname localhost
+    port 7000
     polling_time 0,30
     modbus_retry 1
     reg_size 16
@@ -29,8 +29,8 @@ class ModbusInputTest < Test::Unit::TestCase
 
     # Params
     assert_equal 'modbus.test1', d.instance.tag
-    assert_equal '192.168.0.200', d.instance.hostname
-    assert_equal 502, d.instance.port
+    assert_equal 'localhost', d.instance.hostname
+    assert_equal 7000, d.instance.port
     assert_equal [0,30], d.instance.polling_time
     assert_equal 1, d.instance.modbus_retry
     assert_equal 16, d.instance.reg_size

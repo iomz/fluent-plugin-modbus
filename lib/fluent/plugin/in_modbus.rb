@@ -5,7 +5,7 @@ class ModbusInput < Input
 
     # Fluent Params
     # require param: tag, hostname
-    config_param :tag, :string
+    config_param :tag, :string                          # Sensor name followed by "modbus."
     config_param :hostname, :string
     config_param :port, :integer, :default => 502       # Port used by modbus
     config_param :polling_time, :string, :default => "0,30" # Seconds separated by ','
@@ -13,8 +13,6 @@ class ModbusInput < Input
     config_param :reg_size, :integer, :default => 16    # Bit size of one register
     config_param :reg_addr, :integer, :default => 0     # Address of the first registers
     config_param :nregs, :integer, :default => 1        # Number of registers
-
-    config_param :modbus_name
 
     def initialize
       super
@@ -26,10 +24,14 @@ class ModbusInput < Input
 
       raise ConfigError, "tag is required param" if @tag.empty?
       raise ConfigError, "hostname is required param" if @hostname.empty?
+    
+      # Parse sensor_name from tag
+      @sensor_name = @tag.split(".").last
+      raise configerror, "modbus: 'tag' parameter is required to have sensor name follwed by .(dot)" if @polling_time.empty?
 
       # Parse polling_time to list
       @polling_time = @polling_time.split(',').map{|str| str.strip.to_i} unless @polling_time.nil?
-      raise ConfigError, "modbus: 'polling_time' parameter is required on modbus input" if @polling_time.empty?
+      raise configerror, "modbus: 'polling_time' parameter is required on modbus input" if @polling_time.empty?
     end
 
     # Wait until the next zero second
@@ -121,19 +123,9 @@ class ModbusInput < Input
     def modbus_fetch_data(test = false)
       # Translate the register array to the value
       raw = translate_reg(@reg, @nregs, @reg_size)
-      host_name = @hostname
-      modbus_name = @modbus_name
-=begin
-      # Convert the value in the device's unit
-      val = (@max_device_output / @max_input) * raw 
-      percentile = val/@max_device_output*100.0
-=end
 
-      #record = "#{raw}", "#{host_name}", "#{modbus_name}"
-      record = {}
-      record["raw"] = "#{raw}"
-      record["host_name"] = "#{host_name}"
-      record["modbus_name"] = "#{modbus_name}"
+      #record = "#{raw}", "#{host_name}", "#{sensor_name}"
+      record = {"row"=>"#{raw}", "host_name"=>"#{@host_name}", "sensor_name" => "#{@sensor_name}"}
 
       time = Engine.now
       Engine.emit(@tag, time, record)

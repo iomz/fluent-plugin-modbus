@@ -1,8 +1,12 @@
-#require '/var/service/asama/local/lib/ruby/gems/1.9.1/gems/fluent-plugin-mysql-0.0.2/lib/fluent/plugin/out_mysql'
-require 'out_mysql'
+require "#{File.dirname(__FILE__)}/out_mysql"
 module Fluent
   class MysqlModbusOutput < MysqlOutput
     Plugin.register_output('mysql_modbus', self)
+
+    config_param :raw_data_type, :string, :default => "integer" # Raw data type [integer|float]
+    config_param :max_input, :float         # Max value of input
+    config_param :max_device_output, :float # Max value of device output
+    config_param :unit, :string, :defalut => nil # Unit for device output
     
     def initialize
       super
@@ -25,15 +29,16 @@ module Fluent
       handler = Mysql2::Client.new(init)
 
       chunk.msgpack_each do |tag,time,data|
-        modbus_id = @modbus_id_cache["#{data["host_name"]}.#{data["modbus_name"]}"]
+        modbus_id = @modbus_id_cache["#{data["host_name"]}.#{data["sensor_name"]}"]
         if modbus_id.nil?
-          modbus_id = get_modbus_id(handler,data["host_name"],data["modbus_name"])
-          @modbus_id_cache["#{data["host_name"]}.#{data["modbus_name"]}"] = modbus_id
+          modbus_id = get_modbus_id(handler,data["host_name"],data["sensor_name"],@unit)
+          @modbus_id_cache["#{data["host_name"]}.#{data["sensor_name"]}"] = modbus_id
         end
-        raw = data["raw"]
-        value = fake_translate(data["raw"].to_i) # require translate function
+
+        raw = @raw_data_type=="integer" ? data["raw"].to_i : data["raw"].to_f
+        value, percentile = convert() 
         month_table = "data_" + Time.at(time).strftime("%Y%m")
-        sql = "INSERT INTO #{month_table} (time, raw, value, modbus_id) VALUES (#{time}, #{raw}, #{value}, #{modbus_id})"
+        sql = "INSERT INTO #{month_table} (time, raw, value, percentile, modbus_id) VALUES (#{time}, #{raw}, #{value}, #{modbus_id})"
         p sql
         handler.query(sql)
       end
@@ -43,14 +48,15 @@ module Fluent
 
     private
 
-    def fake_translate(rawdata)
-      return rawdata.to_i * 0.2
+    def convert(raw)
+      # Convert the value in the device's unit
+      val = (@max_device_output / @max_input) * raw 
+      perc = val/@max_device_output*100.0
+      return val, perc
     end
 
-    #def get_modbus_id(handler,host_name,modbusDevice)
-    def get_modbus_id(handler,host_name,modbus_name)
-      #sql = "SELECT modbus_id FROM modbus JOIN host ON modbus.host_id=host.host_id WHERE host.host_name='#{host_name}' AND modbus_name='#{modbusDevice}'" 
-      sql = "SELECT modbus_id FROM modbus JOIN host ON modbus.host_id=host.host_id WHERE host.host_name='#{host_name}' AND modbus_name='#{modbus_name}'"
+    def get_modbus_id(handler,host_name,sensor_name,unit)
+      sql = "SELECT modbus_id FROM modbus JOIN host ON modbus.host_id=host.host_id WHERE host.host_name='#{host_name}' AND sensor_name='#{sensor_name}'"
       result = handler.query(sql).each do |modbus_id|
         modbus_id.each do |key, val|
           return val
@@ -59,9 +65,8 @@ module Fluent
       if result.empty?
         set_host_id(handler, host_name)
         host_id = get_host_id(handler,host_name)
-        #set_modbus(handler, modbus_name, "NULL", host_id)
-        set_modbus(handler, modbus_name, host_id)
-        get_modbus_id(handler, host_name, modbus_name)
+        set_modbus(handler, sensor_name, host_id, unit)
+        get_modbus_id(handler, host_name, sensor_name)
       end
     end
 
@@ -84,10 +89,8 @@ module Fluent
       end
     end
 
-    #def set_modbus(handler,modbus_name,place_id,host_id)
-    def set_modbus(handler,modbus_name,host_id)
-      #sql = "INSERT INTO modbus (modbus_name, place_id, host_id) VALUES ('#{modbus_name}', #{place_id}, #{host_id})"
-      sql = "INSERT INTO modbus (modbus_name, host_id) VALUES ('#{modbus_name}',#{host_id})"
+    def set_modbus(handler,sensor_name,host_id,unit)
+      sql = "INSERT INTO modbus (sensor_name, host_id, unit) VALUES ('#{sensor_name}',#{host_id},'#{unit}')"
       p sql
       handler.query(sql)
     end
