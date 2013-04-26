@@ -14,6 +14,8 @@ class ModbusInput < Input
     config_param :reg_addr, :integer, :default => 0     # Address of the first registers
     config_param :nregs, :integer, :default => 1        # Number of registers
 
+    config_param :modbus_name
+
     def initialize
       super
       require 'rmodbus'
@@ -119,14 +121,19 @@ class ModbusInput < Input
     def modbus_fetch_data(test = false)
       # Translate the register array to the value
       raw = translate_reg(@reg, @nregs, @reg_size)
-
+      host_name = @hostname
+      modbus_name = @modbus_name
 =begin
       # Convert the value in the device's unit
       val = (@max_device_output / @max_input) * raw 
       percentile = val/@max_device_output*100.0
 =end
 
-      record = "#{raw}"
+      #record = "#{raw}", "#{host_name}", "#{modbus_name}"
+      record = {}
+      record["raw"] = "#{raw}"
+      record["host_name"] = "#{host_name}"
+      record["modbus_name"] = "#{modbus_name}"
 
       time = Engine.now
       Engine.emit(@tag, time, record)
