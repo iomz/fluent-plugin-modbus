@@ -29,16 +29,16 @@ module Fluent
       handler = Mysql2::Client.new(init)
 
       chunk.msgpack_each do |tag,time,data|
-        modbus_id = @modbus_id_cache["#{data["host_name"]}.#{data["sensor_name"]}"]
+        modbus_id = @modbus_id_cache["#{data["host"]}.#{data["sensor_name"]}"]
         if modbus_id.nil?
-          modbus_id = get_modbus_id(handler,data["host_name"],data["sensor_name"],@unit)
-          @modbus_id_cache["#{data["host_name"]}.#{data["sensor_name"]}"] = modbus_id
+          modbus_id = get_modbus_id(handler,data["host"],data["sensor_name"],@unit)
+          @modbus_id_cache["#{data["host"]}.#{data["sensor_name"]}"] = modbus_id
         end
 
         raw = @raw_data_type=="integer" ? data["raw"].to_i : data["raw"].to_f
-        value, percentile = convert() 
+        value, percentile = convert(raw) 
         month_table = "data_" + Time.at(time).strftime("%Y%m")
-        sql = "INSERT INTO #{month_table} (time, raw, value, percentile, modbus_id) VALUES (#{time}, #{raw}, #{value}, #{modbus_id})"
+        sql = "INSERT INTO #{month_table} (time, raw, value, percentile, modbus_id) VALUES (#{time}, #{raw}, #{value}, #{percentile}, #{modbus_id})"
         p sql
         handler.query(sql)
       end

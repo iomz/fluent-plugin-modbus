@@ -3,7 +3,7 @@ create table if not exists modbus_debug.modbus
     (
         modbus_id int not null primary key,
         sensor_name varchar(32),
-        unit varchar(32)
+        unit varchar(32),
         host_id integer
     );
 create table if not exists modbus_debug.host

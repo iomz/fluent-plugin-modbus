@@ -4,9 +4,9 @@ class ModbusInput < Input
     Plugin.register_input('modbus', self)
 
     # Fluent Params
-    # require param: tag, hostname
+    # require param: tag, host
     config_param :tag, :string                          # Sensor name followed by "modbus."
-    config_param :hostname, :string
+    config_param :host, :string
     config_param :port, :integer, :default => 502       # Port used by modbus
     config_param :polling_time, :string, :default => "0,30" # Seconds separated by ','
     config_param :modbus_retry, :integer, :default => 1 # Retry count for connecting to modbus device 
@@ -23,7 +23,7 @@ class ModbusInput < Input
       super
 
       raise ConfigError, "tag is required param" if @tag.empty?
-      raise ConfigError, "hostname is required param" if @hostname.empty?
+      raise ConfigError, "host is required param" if @host.empty?
     
       # Parse sensor_name from tag
       @sensor_name = @tag.split(".").last
@@ -45,7 +45,7 @@ class ModbusInput < Input
     def start
       starter do
         begin
-            mtc = ModBus::TCPClient.new(@hostname, @port)
+            mtc = ModBus::TCPClient.new(@host, @port)
         rescue => ex
             p ex
             shutdown # If connection failed, shutdown
@@ -59,7 +59,7 @@ class ModbusInput < Input
     def run
       watcher do
         # Get an array of registers
-        ModBus::TCPClient.new(@hostname, @port) do |cl|
+        ModBus::TCPClient.new(@host, @port) do |cl|
           cl.with_slave(@modbus_retry) do |sl|
             @reg = sl.read_input_registers(@reg_addr, @nregs)
           end
@@ -92,7 +92,6 @@ class ModbusInput < Input
       @thread.run
       @thread.join
       @starter.join
-      @modbus_tcp_client.close
     end
 
     private
@@ -124,8 +123,8 @@ class ModbusInput < Input
       # Translate the register array to the value
       raw = translate_reg(@reg, @nregs, @reg_size)
 
-      #record = "#{raw}", "#{host_name}", "#{sensor_name}"
-      record = {"row"=>"#{raw}", "host_name"=>"#{@host_name}", "sensor_name" => "#{@sensor_name}"}
+      #record = "#{raw}", "#{host}", "#{sensor_name}"
+      record = {"raw"=>"#{raw}", "host"=>"#{@host}", "sensor_name" => "#{@sensor_name}"}
 
       time = Engine.now
       Engine.emit(@tag, time, record)
