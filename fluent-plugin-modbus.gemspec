@@ -3,11 +3,11 @@ lib = File.expand_path('../lib', __FILE__)
 
 Gem::Specification.new do |gem|
   gem.name          = "fluent-plugin-modbus"
-  gem.version       = "0.8.0"
+  gem.version       = "0.1.0"
   gem.authors       = ["iomz"]
   gem.email         = ["iomz@sfc.wide.ad.jp"]
-  gem.description   = %q{Input plugin for modbus}
-  gem.summary       = %q{Input plugin for modbus}
+  gem.description   = %q{Retrieve register value from modbus and store in MySQL}
+  gem.summary       = %q{fluent-plugin}
   gem.homepage      = "https://github.com/iomz/fluent-plugin-modbus"
 
   gem.rubyforge_project = "fluent-plugin_modbus"
@@ -16,10 +16,11 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ["lib"]
 
+=begin
   gem.add_development_dependency = "eventmachine"
   gem.add_runtime_dependency = "fluentd"
   gem.add_runtime_dependency = "rmodbus"
   gem.add_runtime_dependency = "serialport"
   gem.add_runtime_dependency = "mysql2-cs-bind"
-
+=end
 end
