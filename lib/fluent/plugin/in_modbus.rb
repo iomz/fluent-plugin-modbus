@@ -4,8 +4,8 @@ class ModbusInput < Input
     Plugin.register_input('modbus', self)
 
     # Fluent Params
-    # require param: tag, host
-    config_param :tag, :string                          # Sensor name followed by "modbus."
+    # require param: sensor_name, host
+    config_param :sensor_name, :string                          # Sensor name followed by "modbus."
     config_param :host, :string
     config_param :port, :integer, :default => 502       # Port used by modbus
     config_param :polling_time, :string, :default => "0,30" # Seconds separated by ','
@@ -22,12 +22,12 @@ class ModbusInput < Input
     def configure(conf)                                                         
       super
 
-      raise ConfigError, "tag is required param" if @tag.empty?
+      raise ConfigError, "sensor_name is required param" if @sensor_name.empty?
       raise ConfigError, "host is required param" if @host.empty?
     
-      # Parse sensor_name from tag
-      @sensor_name = @tag.split(".").last
-      raise configerror, "modbus: 'tag' parameter is required to have sensor name follwed by .(dot)" if @polling_time.empty?
+      # Parse sensor_name from sensor_name
+      @sensor_name = @sensor_name.split(".").last
+      raise configerror, "modbus: 'sensor_name' parameter is required to have sensor name follwed by .(dot)" if @polling_time.empty?
 
       # Parse polling_time to list
       @polling_time = @polling_time.split(',').map{|str| str.strip.to_i} unless @polling_time.nil?
@@ -106,6 +106,7 @@ class ModbusInput < Input
     end
 
     # Translation and check data type from the register
+    # TODO: Make it compatible with 2 registeres fo float values
     def translate_reg(reg, nregs, reg_size)
       if nregs==1 && reg_size==16         # 16bit integer
         return reg.pack("S").unpack("s")[0]
@@ -124,10 +125,10 @@ class ModbusInput < Input
       raw = translate_reg(@reg, @nregs, @reg_size)
 
       #record = "#{raw}", "#{host}", "#{sensor_name}"
-      record = {"raw"=>"#{raw}", "host"=>"#{@host}", "sensor_name" => "#{@sensor_name}"}
+      record = {"raw"=>"#{raw}", "host"=>"#{@host}", "port"=>"#{@port}", "sensor_name"=>"#{@sensor_name}"}
 
       time = Engine.now
-      Engine.emit(@tag, time, record)
+      Engine.emit(@sensor_name, time, record)
       return {:raw => raw, :record => record} if test
     end
 

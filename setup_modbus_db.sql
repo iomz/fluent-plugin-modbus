@@ -1,21 +1,21 @@
-create database if not exists modbus_debug;
-create table if not exists modbus_debug.modbus
+create database if not exists modbus;
+create table if not exists modbus.sensors
     (
-        modbus_id int not null primary key,
+        sensor_id integer not null auto_increment primary key,
         sensor_name varchar(32),
+        host varchar(32),
+        port integer,
         unit varchar(32),
-        host_id integer
     );
-create table if not exists modbus_debug.host
+
+/*
+create table if not exists modbus.data
     (
-        host_id int not null primary key,
-        host_name varchar(32)
-    );
-create table if not exists modbus_debug.data_201304
-    (
-        time int not null auto_increment primary key,
-        raw     integer,
-        value   float,
+        id integer not null auto_increment primary key,
+        sensor_id integer,
+        time integer not null,
+        raw_value float,
+        value float,
         percentile float,
-        modbus_id   integer
     );
+*/

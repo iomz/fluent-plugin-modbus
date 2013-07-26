@@ -20,5 +20,6 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency = "fluentd"
   gem.add_runtime_dependency = "rmodbus"
   gem.add_runtime_dependency = "serialport"
+  gem.add_runtime_dependency = "mysql2-cs-bind"
 
 end

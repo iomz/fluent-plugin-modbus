@@ -1,42 +1,4 @@
-require "#{File.expand_path("..",File.dirname(__FILE__))}/helper"
-require 'in_modbus'
-require 'time'
-
-class ModbusInputTest < Test::Unit::TestCase
-
-  def setup
-    Fluent::Test.setup
-    @obj = Fluent::ModbusInput.new
-  end
-
-  CONFIG = %[
-    tag modbus.test1
-    hostname localhost
-    port 7000
-    polling_time 0,30
-    modbus_retry 1
-    reg_size 16
-    reg_addr 0
-    nregs 1
-  ]
-  
-  def create_driver(conf=CONFIG)
-    Fluent::Test::InputTestDriver.new(Fluent::ModbusInput).configure(conf)
-  end
-
-  def test_configure
-    d = create_driver
-
-    # Params
-    assert_equal 'modbus.test1', d.instance.tag
-    assert_equal 'localhost', d.instance.hostname
-    assert_equal 7000, d.instance.port
-    assert_equal [0,30], d.instance.polling_time
-    assert_equal 1, d.instance.modbus_retry
-    assert_equal 16, d.instance.reg_size
-    assert_equal 0, d.instance.reg_addr
-    assert_equal 1, d.instance.nregs
-  end
+s
 
   def test_modbus_tcp_client
     d = create_driver

@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'eventmachine'
 
+# TODO: Add 2 register mode and fake string auto generation
 module FakeModbus
   def receive_data data
     flag = true
